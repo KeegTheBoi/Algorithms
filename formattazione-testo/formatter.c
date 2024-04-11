@@ -191,6 +191,7 @@ int main( int argc, char *argv[] )
     FILE *filein = stdin;
     int Lmax;
     char w[WORDLEN];
+    int c;
     if (argc != 3) {
         fprintf(stderr, "Uso: %s Lmax filename\n", argv[0]);
         return EXIT_FAILURE;
@@ -212,8 +213,12 @@ int main( int argc, char *argv[] )
        funzione `read_word()`, e andrà modificato (o riscritto) per
        risolvere il problema. */
 
-    while ( read_word(filein, w) > 0 ) {
-        printf("%s\n", w);
+    while ((c = read_word(filein, w)) > 0 ) {
+        printf("%s ", w);
+        if (c > Lmax) {
+          printf("\n");
+        }
+      
     }
     printf("\n");
     if (filein != stdin) fclose(filein);
