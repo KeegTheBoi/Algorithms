@@ -216,16 +216,18 @@ int main( int argc, char *argv[] )
     acc = 0;
     while ((c = read_word(filein, w)) > 0 ) {
   
-        acc += c;
-        if (acc <= Lmax) {
-          printf("%s ", w);
-          
+        acc += c+1;
+        if (acc <= Lmax){
+        	printf("%s ", w);
+          		
         }
         else {
-          acc = 0;
-          printf("\n");
-        }
-      
+        	acc = 0;          
+        	printf("\n");
+        	printf("%s ", w);
+        	acc += c;
+       	}
+        
     }
     printf("\n");
     if (filein != stdin) fclose(filein);
