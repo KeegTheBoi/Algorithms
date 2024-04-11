@@ -209,23 +209,19 @@ int main( int argc, char *argv[] )
     }
 
     header(Lmax);
-    /* [TODO]: il blocco seguente legge e stampa le "parole" dal file,
+    /* il blocco seguente legge e stampa le "parole" dal file,
        una per riga. Si tratta solo di un esempio di uso della
        funzione `read_word()`, e andrà modificato (o riscritto) per
        risolvere il problema. */
     acc = 0;
     while ((c = read_word(filein, w)) > 0 ) {
-  
         acc += c+1;
         if (acc <= Lmax){
-        	printf("%s ", w);
-          		
+        	printf("%s ", w);	
         }
-        else {
-        	acc = 0;          
-        	printf("\n");
-        	printf("%s ", w);
-        	acc += c;
+        else {  
+			printf("\n");
+			acc = c;
        	}
         
     }
