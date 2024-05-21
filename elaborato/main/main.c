@@ -96,7 +96,7 @@ int check_bounds(int x, int y, int boundx, int boundy);
 int check_param(int argc, const char *prog);
 
 /*dijkstra helpers*/
-Coord min_distance_sofar(long int **dist, int **visited, Graph *g);
+Coord min_dist_coord_sofar(long int **dist, int **visited, Graph *g);
 int shorterst_path(Coord src, Coord dest, Graph *g, long int **dist, Coord **prev);
 int print_result(Coord src, Coord dest, long int **dist, Coord **prev, Graph *g, long int cf);
 
@@ -221,7 +221,7 @@ int cmp_coords(Coord c1, Coord c2) {
 int init_weight(Edge *edges) {
     int i;
     for (i = 0; i < MAX_ADJAX; i++){
-        edges[i].weight = INT_MAX;
+        edges[i].weight = INT_MAX;  
     }
     return 0;
 }
@@ -250,15 +250,15 @@ Matrix *init_input_matrix(FILE *file, long int *cf, long int *ch) {
     assert(m <= MAX_SIZE && m >= MIN_SIZE);
     
     /*allocate memory to the matrix, each row in presented as a single array pointer, so a matrix is a double pointer*/
-    barray = (int**)malloc(n * sizeof(int*));
+    barray = (int**)malloc((n) * sizeof(int*));
     assert(barray != NULL);
     
     for (i = 0; i < n; i++) {
         barray[i] = (int*)malloc(m * sizeof(int));
-        assert(barray[i] != NULL);
+        assert(barray[i] != NULL);  
     }
     /*Allocate memory for matrix*/
-    H = (Matrix*)malloc(sizeof(Matrix*));
+    H = malloc(sizeof(Matrix));
     assert(H != NULL);
 
     /*assignament*/
@@ -272,11 +272,11 @@ Matrix *init_input_matrix(FILE *file, long int *cf, long int *ch) {
 
 int init_node(Node *node, int i, int j) {
     node->coord = create_coord(i, j);
-    node->edges = (Edge*)malloc(MAX_ADJAX * sizeof(Edge));
+    node->edges = calloc(MAX_ADJAX, sizeof(Edge));
     assert(node->edges != NULL);
+    
     /*initialize edges weight*/
     init_weight(node->edges);
-    
     return 0;
 }
 
@@ -334,10 +334,10 @@ Graph *create_graph(Matrix *H, long int ch) {
     Graph *g;
     
     barray = H->barray;
-    g = (Graph*)malloc(sizeof(Graph*));
+    g = malloc(sizeof(Graph));
     g->m = H->m;
     g->n = H->n;
-    g->nodes = (Node**)malloc(g->n * sizeof(Node*));
+    g->nodes = malloc(g->n * sizeof(Node*));
     assert(g->nodes != NULL);
     for (v = 0; v < g->n; v++) {
         g->nodes[v] = (Node*)malloc(g->m * sizeof(Node));
@@ -348,8 +348,7 @@ Graph *create_graph(Matrix *H, long int ch) {
     for (i = 0; i < H->n; i++){
         for (j = 0; j < H->m; j++){
             init_node(&g->nodes[i][j], i, j);
-            init_adjax(i, j, g, barray, ch);
-            
+            init_adjax(i, j, g, barray, ch);  
         }
         
     }
@@ -375,32 +374,40 @@ Coord **create_matrix_coord(Graph* g) {
 
 long int **create_matrix_longint(Graph* g) {
     long int **mat;
-    int v;
+    int v, i;
 
     mat = (long int**)malloc(g->n * sizeof(long int*));
     assert(mat != NULL);
     for (v = 0; v < g->n; v++) {
         mat[v] = (long int*)malloc(g->m * sizeof(long int));
         assert(mat[v] != NULL);
+        for (i = 0; i < g->m; i++){
+            mat[v][i] = 0;
+        }
+
     }
     return mat;
 }
 
 int **create_matrix_int(Graph* g) {
     int **mat;
-    int v;
+    int v, i;
 
     mat = (int**)malloc(g->n * sizeof(int*));
     assert(mat != NULL);
     for (v = 0; v < g->n; v++) {
         mat[v] = (int*)malloc(g->m * sizeof(int));
         assert(mat[v] != NULL);
+        for (i = 0; i < g->m; i++){
+            mat[v][i] = 0;
+        }
+        
     }
     return mat;
 }
 
 /*dijkstra*/
-Coord min_distance_sofar(long int **dist, int **visited, Graph *g) {
+Coord min_dist_coord_sofar(long int **dist, int **visited, Graph *g) {
     int i, j;
     long int min_val = LONG_MAX;
     Coord min_edge;
@@ -452,7 +459,7 @@ int dijkstra(Graph *g, Coord src, Coord dest, Coord **prev, long int **dist, lon
     Edge *edges;
     int c;
     long int accumulate_dist;
-    Coord min_coord;
+    Coord adjax_node;
 
     curr = src;
     visited = create_matrix_int(g);
@@ -461,18 +468,20 @@ int dijkstra(Graph *g, Coord src, Coord dest, Coord **prev, long int **dist, lon
     dist[curr.x][curr.y] = 0;
     prev[curr.x][curr.y] = curr;
 
-    /*loops until it found the destination*/
+    /*clears all nodes weight until it found the destination*/
     while(!cmp_coords(curr, dest)) {
         edges = g->nodes[curr.x][curr.y].edges;
         visited[curr.x][curr.y] = 1;
     
         for (c = 0; c < MAX_ADJAX; c++)
         {
-            Coord adjax_node = edges[c].destination;
+            adjax_node = edges[c].destination;
             /*check for the adjiax onli if not visited*/
             if (!visited[adjax_node.x][adjax_node.y]) {
                 accumulate_dist = edges[c].weight + (weight_supp) + dist[curr.x][curr.y];
-                /*checks wether the current unvisited node weight is less than in the dist array*/
+                /*checks whether the current unvisited node weight is less than 
+                the previous so it chooses the best one for that particular node
+                */
                 if (accumulate_dist < dist[adjax_node.x][adjax_node.y]) {
                     prev[adjax_node.x][adjax_node.y] = curr;
                     dist[adjax_node.x][adjax_node.y] = accumulate_dist;
@@ -480,12 +489,12 @@ int dijkstra(Graph *g, Coord src, Coord dest, Coord **prev, long int **dist, lon
             }    
         }
         
-        min_coord = min_distance_sofar(dist, visited, g);
-        if (cmp_coords(min_coord, create_coord(-1, -1))) {
+        curr = min_dist_coord_sofar(dist, visited, g);
+        if (cmp_coords(curr, create_coord(-1, -1))) {
             fprintf(stderr, "Coordinata minima non adeguata (-1, -1)");
             return EXIT_FAILURE;                
         }
-        curr = min_coord;    
+        
                
     }
     destroy_matrix_int(visited, g->n);
@@ -518,13 +527,11 @@ int main(int argc, char *argv[])
     H = init_input_matrix(filein, &fixed_cost, &diff_cost);
     g = create_graph(H, diff_cost);
     
-    /*init dijstra inputs*/
     src = create_coord(0, 0);
     dest = create_coord(g->n-1, g->m-1);
     dist = create_matrix_longint(g);
     prev = create_matrix_coord(g);
     
-    /*perfrom dijkstra*/
     result = dijkstra(g, src, dest, prev, dist, fixed_cost);
     if (result) return EXIT_FAILURE;
 
@@ -532,7 +539,7 @@ int main(int argc, char *argv[])
     if (result) return EXIT_FAILURE;
     NEWLINE()
 
-    /*free allocated memory*/
+    
     destroy_matrix_longint(dist, g->n);
     destroy_matrix_coord(prev, g->n);
     destroy_graph(g);
