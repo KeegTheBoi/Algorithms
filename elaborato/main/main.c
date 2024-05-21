@@ -5,19 +5,32 @@ Institution: ALMA Mater Studiorium Bologna (Unibo)
 Difficulty: medium
 */
 
+/*IMPORTANT
+APPROACH EXPLAINED:
+
+    As the input is a matrix, I structured the nodes as a matrix of coords,
+    instead of a simple array of nodes.
+    I made this choice to easily access to bidimensional array (matrix) 
+    i.e nodes, previous, distance, visited values such as
+        → barray[coord.x][coord.y]
+
+    Further we need to print the path as coordinate format and such approach grant to be pretty useful
+
+*/
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <string.h> 
 #include <assert.h>
 #include <limits.h>
+#include <math.h>
 
 #define INPUT 4
 #define MAX_SIZE 250
 #define MIN_SIZE 5
 #define MAX_ADJAX 4
 
-#define CHECK(I) printf("Checkpoint %d\n", I);
-#define EVAL(V) printf("\nValues is → %d: ", V);
+#define CHECK(I) printf(" ~Checkpoint %d\n", I);
+#define EVAL(V) printf("\nValues is → %d ", V);
 #define NEWLINE() printf("\n");
 
 /*STRUCTS*/
@@ -59,15 +72,45 @@ typedef struct
 int read_file(FILE **file, const char *input_file_path);
 int read_int(FILE *file, int *value);
 int read_long(FILE *file, long int *value);
+/*Reads an input matrix structure
+[INPUT]: 
+-Input file
+-output matrix (pointer to pointer)
+-number of columns
+-number of rows
+[RETURN]: control bit 
+*/
 int read_matrix(FILE *file, int **mat, int m, int n);
 
 /*initializations*/
 Matrix *init_input_matrix(FILE *file, long int *cf, long int *ch);
+/*Creates a graph from a matrix of nodes
+[INPUT]: 
+-Matrix to extrapolate its values and its shape
+-height difference needed to compute the weight from a node to a successive one
+[RETURN]: Graph pointer
+*/
 Graph *create_graph(Matrix *H, long int ch);
-int init_node(Node *node, int i, int j);
-int init_adjax(int i, int j, Graph *g, int **barray, long int ch);
+void init_node(Node *node, int i, int j);
+/*Initialize each node with its adjax nodes (MAX 4), the graph becomes is represented .. 
+as matrix where each node has an adjiancy list represented by the edges (naturally edges ..
+..overlap but, it is not big deal)
+[INPUT]: 
+-i, j → current node coordinates
+-graph → to check the adjiax bounds 
+-barray → values to compute the weight
+-ch → height difference to compute weight
+[RETURN]: \
+*/
+void init_adjax(int i, int j, Graph *g, int **barray, long int ch);
 int insert_edge(Edge *edge, int *c, long int weight, Coord destination, Coord source);
-int init_dist(long int** barr, Graph* g);
+/*Initializes distance as a bidimensional array to Infinite ~To later get the minimum~
+[INPUT]: 
+-bidimensional array which contains best weight from source
+-Graph to get distance array shape
+[RETURN]: Graph pointer
+*/
+void init_dist(long int** barr, Graph* g);
 
 /*creation*/
 Coord **create_matrix_coord(Graph* g);
@@ -75,35 +118,52 @@ long int **create_matrix_longint(Graph* g);
 int **create_matrix_int(Graph* g);
 
 /*destruction*/
-int destroy_matrix(Matrix *mat);
-int destroy_graph(Graph *g);
-int destroy_node(Node *node);
-int destroy_matrix_int(int **mat, int rows);
-int destroy_matrix_longint(long int **mat, int rows);
-int destroy_matrix_coord(Coord **mat, int rows);
+void destroy_matrix(Matrix *mat);
+void destroy_graph(Graph *g);
+void destroy_node(Node *node);
+void destroy_matrix_int(int **mat, int rows);
+void destroy_matrix_longint(long int **mat, int rows);
+void destroy_matrix_coord(Coord **mat, int rows);
 
 /*weight*/
-int init_weight(Edge *edges);
+
+/*Computes the weight from the given formula
+-current value
+-succesive value
+-height difference multiplier
+*/
 long int compute_weight(int curr, int succ, long int ch);
 
 /*coord utils*/
 Coord create_coord(int x, int y);
-int display_coord(Coord c);
-int cmp_coords(Coord c1, Coord c2);
+void display_coord(Coord c);
+/*Compares two coord and returns 0 if are not equal 1 otherwise*/
+int is_equal_coord(Coord c1, Coord c2);
 
 /*chekers*/
 int check_bounds(int x, int y, int boundx, int boundy);
 int check_param(int argc, const char *prog);
 
 /*dijkstra helpers*/
+/*Calcultes the minum coordinate excluding the visited ones
+[INPUT]:
+-dist → distance bidimensional array to calculate the minimum
+-visited → visited coordinates
+-graph to get the shape 
+[RETURN]: minimum coordinate
+*/
 Coord min_dist_coord_sofar(long int **dist, int **visited, Graph *g);
-int shorterst_path(Coord src, Coord dest, Graph *g, long int **dist, Coord **prev);
-int print_result(Coord src, Coord dest, long int **dist, Coord **prev, Graph *g, long int cf);
+/*Recursive algorithm to print the coordinates of the shortest path
+It recursively gets the previous coordinate starting from the destination coord
+*/
+void shortest_path(Coord src, Coord dest, Graph *g, long int **dist, Coord **prev);
+void print_result(Coord src, Coord dest, long int **dist, Coord **prev, Graph *g, long int cf);
 
 /*dijkstra procedure*/
-int dijkstra(Graph *g, Coord src, Coord dest, Coord **prev, long int **dist, long int weight_supp);
+/*Explanation shown in the procedure*/
+int dijkstra(Graph *g, Coord source, Coord destination, Coord **prev_barray, long int **distance_barray, long int weight_supplier);
 
-/*METHODS*/
+/*METHODS / PROCEDURES*/
 /*handle input file*/
 int read_int(FILE *file, int *value) {
     return fscanf(file, "%d ", value);
@@ -123,10 +183,11 @@ int read_matrix(FILE *file, int **mat, int m, int n) {
         }   
     }
     assert(nline == n*m);
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 int check_param(int argc, const char *prog) {
+    /*Ensures test input and program name are the only arguments passed*/
     if (argc != 2) {
         fprintf(stderr, "Invocare il programma con: %s test?.in\n", prog);
         return EXIT_FAILURE;
@@ -135,7 +196,6 @@ int check_param(int argc, const char *prog) {
 }
 
 int read_file(FILE **file, const char *input_file_path) {
-    
     if (strcmp(input_file_path, "-")) {
         *file = fopen(input_file_path, "r");
         if (*file == NULL) {
@@ -147,26 +207,23 @@ int read_file(FILE **file, const char *input_file_path) {
 }
 
 /*free*/
-int destroy_matrix_int(int **mat, int rows) {
+void destroy_matrix_int(int **mat, int rows) {
     int i;
     for (i = 0; i < rows; i++)
         free(mat[i]);
     free(mat);
-    return 0;
 }
 
-int destroy_matrix(Matrix *mat) {
+void destroy_matrix(Matrix *mat) {
     destroy_matrix_int(mat->barray, mat->n);
     free(mat);
-    return 0;
 }
 
-int destroy_node(Node *node) {
+void destroy_node(Node *node) {
     free(node);
-    return 0;
 }
 
-int destroy_graph(Graph *g) {
+void destroy_graph(Graph *g) {
     int i, j;
     for (i = 0; i < g->n; i++){
         for (j = 0; j < g->m; j++){
@@ -176,24 +233,20 @@ int destroy_graph(Graph *g) {
     }
     free(g->nodes);
     free(g);
-    
-    return 0;
 }
 
-int destroy_matrix_longint(long int **mat, int rows) {
+void destroy_matrix_longint(long int **mat, int rows) {
     int i;
     for (i = 0; i < rows; i++)
         free(mat[i]);
     free(mat);
-    return 0;
 }
 
-int destroy_matrix_coord(Coord **mat, int rows) {
+void destroy_matrix_coord(Coord **mat, int rows) {
     int i;
     for (i = 0; i < rows; i++)
         free(mat[i]);
     free(mat);
-    return 0;
 }
 
 /*coord*/
@@ -208,22 +261,12 @@ Coord create_coord(int x, int y) {
     return ret;
 }
 
-int display_coord(Coord c) {
+void display_coord(Coord c) {
     printf("%d %d ", c.x, c.y);
-    return 0;
 }
 
-int cmp_coords(Coord c1, Coord c2) {
+int is_equal_coord(Coord c1, Coord c2) {
     return c1.x == c2.x && c2.y == c1.y;
-}
-
-/*weight*/
-int init_weight(Edge *edges) {
-    int i;
-    for (i = 0; i < MAX_ADJAX; i++){
-        edges[i].weight = INT_MAX;  
-    }
-    return 0;
 }
 
 long int compute_weight(int curr, int succ, long int ch) {
@@ -270,56 +313,44 @@ Matrix *init_input_matrix(FILE *file, long int *cf, long int *ch) {
     return H;
 }
 
-int init_node(Node *node, int i, int j) {
+void init_node(Node *node, int i, int j) {
     node->coord = create_coord(i, j);
     node->edges = calloc(MAX_ADJAX, sizeof(Edge));
-    assert(node->edges != NULL);
-    
-    /*initialize edges weight*/
-    init_weight(node->edges);
-    return 0;
+    assert(node->edges != NULL);    
 }
 
 int insert_edge(Edge *edge, int *c, long int weight, Coord destination, Coord source) {
-    
     edge[*c].source = source;
     edge[*c].destination = destination;
     edge[*c].weight = weight;
     *c += 1;        
-    return 0;
+    return EXIT_SUCCESS;
 }
 
-int init_adjax(int i, int j, Graph *g, int **barray, long int ch) {
+void init_adjax(int i, int j, Graph *g, int **barray, long int ch) {
     int startx, starty;
     int adjiax;
     int c;
     Coord dest;
 
     c = 0;
-    if (cmp_coords(create_coord(i, j), create_coord(g->n-1, g->m-1)) == 1) {
-        return 0;
-    }
-
+    
     for(startx = i - 1; startx <= i + 1; startx++) {
         for (starty = j - 1; starty <= j + 1; starty++) {
-            if (check_bounds(startx, starty, g->n, g->m)) {
-                if ((startx == i || starty == j) && !(startx == i && starty == j)) {
-                    adjiax = barray[startx][starty];
-                    dest = create_coord(startx, starty);
-                    insert_edge(g->nodes[i][j].edges, &c, compute_weight(barray[i][j], adjiax, ch), dest, g->nodes[i][j].coord);  
-                }
+            if (check_bounds(startx, starty, g->n, g->m) && (startx == i || starty == j) && !(startx == i && starty == j)) {
+                adjiax = barray[startx][starty];
+                dest = create_coord(startx, starty);
+                insert_edge(g->nodes[i][j].edges, &c, compute_weight(barray[i][j], adjiax, ch), dest, g->nodes[i][j].coord);  
             }
         }
     }
-    return 0;
 }
 
-int init_dist(long int** barr, Graph* g) {
+void init_dist(long int** barr, Graph* g) {
     int i, j;
     for (i = 0; i < g->n; i++)
         for (j = 0; j < g->m; j++)
-            barr[i][j] = INT_MAX;
-    return 0;
+            barr[i][j] = LONG_MAX;
 }
 
 /*outbound check*/
@@ -384,7 +415,6 @@ long int **create_matrix_longint(Graph* g) {
         for (i = 0; i < g->m; i++){
             mat[v][i] = 0;
         }
-
     }
     return mat;
 }
@@ -409,8 +439,10 @@ int **create_matrix_int(Graph* g) {
 /*dijkstra*/
 Coord min_dist_coord_sofar(long int **dist, int **visited, Graph *g) {
     int i, j;
-    long int min_val = LONG_MAX;
+    long int min_val;
     Coord min_edge;
+
+    min_val = LONG_MAX;
     for (i = 0; i < g->n; i++)
     {
         for (j = 0; j < g->m; j++)
@@ -427,21 +459,21 @@ Coord min_dist_coord_sofar(long int **dist, int **visited, Graph *g) {
     return min_edge; 
 }
 
-int shorterst_path(Coord src, Coord dest, Graph *g, long int **dist, Coord **prev) {
-    if (cmp_coords(dest, src)) {
-        return 0;
+void shortest_path(Coord src, Coord dest, Graph *g, long int **dist, Coord **prev) {
+    if (is_equal_coord(dest, src)) {
+        return;
     }
     dest = prev[g->nodes[dest.x][dest.y].coord.x][g->nodes[dest.x][dest.y].coord.y];
-    shorterst_path(src, dest, g, dist, prev);
+    shortest_path(src, dest, g, dist, prev);
     display_coord(dest);
     NEWLINE()
-    return 0;
+    return;
 }
 
-int print_result(Coord src, Coord dest, long int **dist, Coord **prev, Graph *g, long int cf) {
+void print_result(Coord src, Coord dest, long int **dist, Coord **prev, Graph *g, long int cf) {
     long int totalsum;
 
-    shorterst_path(src, dest, g, dist, prev);
+    shortest_path(src, dest, g, dist, prev);
     display_coord(dest);
     NEWLINE()
     totalsum = dist[dest.x][dest.y] + cf;
@@ -449,7 +481,7 @@ int print_result(Coord src, Coord dest, long int **dist, Coord **prev, Graph *g,
     display_coord(create_coord(-1, -1));
     NEWLINE()
     printf("%li",totalsum);
-    return 0;
+    
 }
 
 int dijkstra(Graph *g, Coord src, Coord dest, Coord **prev, long int **dist, long int weight_supp) {
@@ -468,16 +500,19 @@ int dijkstra(Graph *g, Coord src, Coord dest, Coord **prev, long int **dist, lon
     dist[curr.x][curr.y] = 0;
     prev[curr.x][curr.y] = curr;
 
-    /*clears all nodes weight until it found the destination*/
-    while(!cmp_coords(curr, dest)) {
+    /*Time complexity O(V) where V is the number of vertexes because is the worst case it may..*/
+    /*clear all nodes weight until it found the destination*/
+    /*Overall Time Complexity O(V) * [O(V) ~minimum algorithm~] → O(V^2)*/
+    while(!is_equal_coord(curr, dest)) {
         edges = g->nodes[curr.x][curr.y].edges;
         visited[curr.x][curr.y] = 1;
     
         for (c = 0; c < MAX_ADJAX; c++)
         {
             adjax_node = edges[c].destination;
-            /*check for the adjiax onli if not visited*/
+            /*checks for the adjiax onliy if not visited */
             if (!visited[adjax_node.x][adjax_node.y]) {
+                /*accumlated distance to the adjax_{c} node  */
                 accumulate_dist = edges[c].weight + (weight_supp) + dist[curr.x][curr.y];
                 /*checks whether the current unvisited node weight is less than 
                 the previous so it chooses the best one for that particular node
@@ -488,9 +523,10 @@ int dijkstra(Graph *g, Coord src, Coord dest, Coord **prev, long int **dist, lon
                 }
             }    
         }
-        
+        /*Minimum is found from a traditional array so..*/
+        /*Time complexity is O(E) where E are the number of vertexes, in this case n*m */
         curr = min_dist_coord_sofar(dist, visited, g);
-        if (cmp_coords(curr, create_coord(-1, -1))) {
+        if (is_equal_coord(curr, create_coord(-1, -1))) {
             fprintf(stderr, "Coordinata minima non adeguata (-1, -1)");
             return EXIT_FAILURE;                
         }
@@ -535,11 +571,9 @@ int main(int argc, char *argv[])
     result = dijkstra(g, src, dest, prev, dist, fixed_cost);
     if (result) return EXIT_FAILURE;
 
-    result = print_result(src, dest, dist, prev, g, fixed_cost);
-    if (result) return EXIT_FAILURE;
+    print_result(src, dest, dist, prev, g, fixed_cost);
     NEWLINE()
 
-    
     destroy_matrix_longint(dist, g->n);
     destroy_matrix_coord(prev, g->n);
     destroy_graph(g);
