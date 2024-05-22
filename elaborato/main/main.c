@@ -500,8 +500,8 @@ int dijkstra(Graph *g, Coord src, Coord dest, Coord **prev, long int **dist, lon
     dist[curr.x][curr.y] = 0;
     prev[curr.x][curr.y] = curr;
 
-    /*Time complexity O(V) where V is the number of vertexes because is the worst case it may..*/
-    /*clear all nodes weight until it found the destination*/
+    /*Time complexity O(V) where V is the number of vertexes because is the worst case it may..
+    ..lear all nodes weight until it found the destination*/
     /*Overall Time Complexity O(V) * [O(V) ~minimum algorithm~] → O(V^2)*/
     while(!is_equal_coord(curr, dest)) {
         edges = g->nodes[curr.x][curr.y].edges;
@@ -510,12 +510,12 @@ int dijkstra(Graph *g, Coord src, Coord dest, Coord **prev, long int **dist, lon
         for (c = 0; c < MAX_ADJAX; c++)
         {
             adjax_node = edges[c].destination;
-            /*checks for the adjiax onliy if not visited */
+            /*checks for the adjax only if not visited */
             if (!visited[adjax_node.x][adjax_node.y]) {
                 /*accumlated distance to the adjax_{c} node  */
                 accumulate_dist = edges[c].weight + (weight_supp) + dist[curr.x][curr.y];
-                /*checks whether the current unvisited node weight is less than 
-                the previous so it chooses the best one for that particular node
+                /*checks whether the current unvisited node weight is less than..
+                ..the previous so it chooses the best one for that particular node
                 */
                 if (accumulate_dist < dist[adjax_node.x][adjax_node.y]) {
                     prev[adjax_node.x][adjax_node.y] = curr;
@@ -529,9 +529,7 @@ int dijkstra(Graph *g, Coord src, Coord dest, Coord **prev, long int **dist, lon
         if (is_equal_coord(curr, create_coord(-1, -1))) {
             fprintf(stderr, "Coordinata minima non adeguata (-1, -1)");
             return EXIT_FAILURE;                
-        }
-        
-               
+        }     
     }
     destroy_matrix_int(visited, g->n);
     return EXIT_SUCCESS;
