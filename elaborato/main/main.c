@@ -1,8 +1,10 @@
-/* C code to implement shortest path from src to destination given height differences */
 
-/*Author: Keegan Carlo Falcao
-Institution: ALMA Mater Studiorium Bologna (Unibo)
-Difficulty: medium
+/*
+Nome: Keegan Carlo
+Cognome: Falcao
+Matricola: 0001042769
+Classe: A
+Indirizzo email: keegancarlo.falcao@studio.unibo.it
 */
 
 /*IMPORTANT
@@ -381,9 +383,7 @@ Graph *create_graph(Matrix *H, long int ch) {
             init_node(&g->nodes[i][j], i, j);
             init_adjax(i, j, g, barray, ch);  
         }
-        
     }
-    
     return g;
 }
 
@@ -430,8 +430,7 @@ int **create_matrix_int(Graph* g) {
         assert(mat[v] != NULL);
         for (i = 0; i < g->m; i++){
             mat[v][i] = 0;
-        }
-        
+        }   
     }
     return mat;
 }
@@ -443,10 +442,8 @@ Coord min_dist_coord_sofar(long int **dist, int **visited, Graph *g) {
     Coord min_edge;
 
     min_val = LONG_MAX;
-    for (i = 0; i < g->n; i++)
-    {
-        for (j = 0; j < g->m; j++)
-        {
+    for (i = 0; i < g->n; i++) {
+        for (j = 0; j < g->m; j++) {
             int exist = visited[i][j];
             if(!exist) {
                 if(dist[i][j] < min_val) {
@@ -460,9 +457,8 @@ Coord min_dist_coord_sofar(long int **dist, int **visited, Graph *g) {
 }
 
 void shortest_path(Coord src, Coord dest, Graph *g, long int **dist, Coord **prev) {
-    if (is_equal_coord(dest, src)) {
+    if (is_equal_coord(dest, src))
         return;
-    }
     dest = prev[g->nodes[dest.x][dest.y].coord.x][g->nodes[dest.x][dest.y].coord.y];
     shortest_path(src, dest, g, dist, prev);
     display_coord(dest);
@@ -481,11 +477,9 @@ void print_result(Coord src, Coord dest, long int **dist, Coord **prev, Graph *g
     display_coord(create_coord(-1, -1));
     NEWLINE()
     printf("%li",totalsum);
-    
 }
 
 int dijkstra(Graph *g, Coord src, Coord dest, Coord **prev, long int **dist, long int weight_supp) {
-
     Coord curr;
     int **visited;
     Edge *edges;
@@ -493,9 +487,9 @@ int dijkstra(Graph *g, Coord src, Coord dest, Coord **prev, long int **dist, lon
     long int accumulate_dist;
     Coord adjax_node;
 
+    /*Initial coordinate is 0, 0*/
     curr = src;
     visited = create_matrix_int(g);
-    
     init_dist(dist, g);
     dist[curr.x][curr.y] = 0;
     prev[curr.x][curr.y] = curr;
